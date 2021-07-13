@@ -35,15 +35,9 @@ update_progress_bar(current_date)
 
 # loop over days
 while current_date <= today:
-    year, month, day = current_date.year, current_date.month, current_date.day
-    # pad day from e.g. 1 to 01
-    if day < 10:
-        day = f"0{day}"
-    if month < 10:
-        month = f"0{month}"
-
+    date_string = current_date.strftime("%Y%m%d")
     # format url to right form
-    url_string = f"{ARCHIVE_URL}{year}{month}{day}.html"
+    url_string = f"{ARCHIVE_URL}{date_string}.html"
     # request html and scrape it for the datapoints 
     response = requests.get(url_string).text
     soup = BeautifulSoup(response, 'html.parser')

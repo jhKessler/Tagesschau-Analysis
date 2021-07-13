@@ -1,11 +1,10 @@
-# %%
+
 # imports
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from collections import Counter
 
-# %%
 # load data
 data = pd.read_excel("data/tagesschau_articles.xlsx")
 
@@ -25,12 +24,15 @@ not_matching = data["date"].compare(data["proofdate"])
 # lets drop proof date because we have the time already as a dt obj in the "date_and_time" column
 data.drop(columns=["proofdate"], inplace=True)
 
-# %%
 # get military time as column
 data["military_time"] = data["date_and_time"].dt.strftime("%H%M").astype(int)
+
 # get distribution by time
 time_distribution = data.groupby(by=["military_time"]).apply(len)
 
+# get most used words and remove commas
+god_string = " ".join(data["article"]).replace(",", "")
+most_used_words = Counter(god_string.split()).most_common(1000)
 
 def filter_uncapitalized(count_list, n_return: int):
     """Filter out uncapitalized words in most_common list"""
@@ -47,36 +49,30 @@ def filter_uncapitalized(count_list, n_return: int):
             del count_list[0]
     return return_list
 
-# %%
-# get most used words and remove commas
-god_string = " ".join(data["article"]).replace(",", "")
-most_used_words = Counter(god_string.split()).most_common(1000)
-
 # filter out non capitalized words, since they probably are verbs
 pronouns = ["Der", "Die", "Das"]
 keyword_list = filter_uncapitalized(most_used_words, n_return=100)
 
-# %%
 # check for most mentioned countries
 # load country names and abbreviations
 country_data = pd.read_excel("data/country_data.xlsx")
 # remove pronouns from "Amtliche Vollform" column
 for pn in pronouns:
     country_data["Amtliche Vollform"] = country_data["Amtliche Vollform"].str.replace(pn, "")
+
 # list for saving country data
 countries_list = []
 
 # filter countries by mentions
 # loop over keywords
 for kw, count in keyword_list:
-
     # loop over country data
     for col in country_data.columns:
         # if keyword in country data, add it to the list and continue to next word
         if kw.upper() in country_data[col].str.upper().values:
             countries_list.append([kw, count])
             continue
-# %%
+
 # plot occurence of countries
 countries, country_counts = zip(*countries_list)
 
@@ -89,9 +85,9 @@ plt.pie(
     autopct=(lambda x: int(float(x) * sum(country_counts)) // 100),
     )
 # save plot
-plt.savefig("graphs/mentions_by_country.png")
+plt.savefig("graphs/Other/mentions_by_country.png")
 plt.close()
-#%%
+
 # plot description length over time
 data["desc_length"] = data["article"].str.len()
 data["year"] = data["date_and_time"].dt.year
@@ -110,10 +106,9 @@ plt.yticks(np.arange(0, 600, 50))
 plt.xlabel("Year")
 plt.ylabel("Character Count")
 # save graph
-plt.savefig("graphs/description_length_over_time.png")
+plt.savefig("graphs/Other/description_length_over_time.png")
 plt.close()
 
-#%%
 # get episode count per day
 episodes_per_day = data["date_and_time"].dt.date.value_counts().to_frame()
 episodes_per_day.reset_index(inplace=True)
@@ -142,9 +137,8 @@ more_than_two = more_than_two["article"].apply(pd.Series)
 more_than_two.columns = [f"Keyword_{i}" for i in range(1, 4)]
 more_than_two = more_than_two.applymap(lambda x: x[0])
 
-# %%
-# lets look at the mentions of specific words over time
 
+# lets look at the mentions of specific words over time
 def get_mentions_over_time(word: str, group_by_quarter):
     """Creates timeline of mentions of a specific word"""
     timeline = by_quarter["article"].apply(lambda x: get_mentions_in_quarter(word, x))
@@ -160,7 +154,7 @@ def get_mentions_in_quarter(word: str, quarter_series: pd.Series):
 # group data by quarter
 data["quarter"] = data["date_and_time"].dt.quarter.astype(str) + "/" + data["year"].astype(str)
 by_quarter = data.groupby(by=["quarter"])
-# %%
+
 # plot mentions of word over time
 
 def plot_trend(word: str, save: bool, show: bool):
@@ -181,4 +175,40 @@ def plot_trend(word: str, save: bool, show: bool):
 words_of_interest = ["coronavirus", "china", "anschlag", "EU", "russland", "krise", "klimawandel", "trump", "biontech"]
 # for w in words_of_interest:
 #     plot_trend(w, save=True, show=False)
-plot_trend("maskenaffäre", save=False, show=True)
+
+
+# filter out all episodes of "Tageschau extra"
+tagesthemen_extra = data[data["title"].str.lower().str.contains("extra")]
+# its itneresting that the average description length is way shorter than normal
+extra_by_year = tagesthemen_extra.groupby("year")
+by_year = data.groupby("year")
+# get average length
+avg_length_special_episodes = extra_by_year["desc_length"].mean()
+avg_length_normal_episodes = by_year["desc_length"].mean()
+
+# make bar chart
+fig, ax = plt.subplots(figsize=(10, 10))
+b1 = ax.bar(x=avg_length_normal_episodes.index, height=avg_length_normal_episodes)
+b2 = ax.bar(x=avg_length_normal_episodes.index, height=avg_length_special_episodes)
+
+ax.legend(["Normal Episodes", "Special Episodes"])
+ax.set_xticks(avg_length_normal_episodes.index)
+ax.set_ylabel("Description length", fontsize=20)
+ax.bar_label(b1, avg_length_normal_episodes.astype(int), fontsize=12)
+ax.bar_label(b2, avg_length_special_episodes.astype(int), label_type="center", fontsize=12)
+# save
+plt.savefig("graphs/other/special_episode_length.png")
+
+# group description length by weekday
+
+data["wochentag"] = data["date_and_time"].dt.weekday
+by_weekday = data.groupby("wochentag")["desc_length"].mean()
+# plot relation
+fig, ax = plt.subplots(figsize=(10, 10))
+day_names = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
+
+p1 = ax.bar(x=day_names, height=by_weekday)
+ax.bar_label(p1, by_weekday.astype(int))
+ax.set_ylabel("Description Length", fontsize=15)
+plt.savefig("graphs/other/desc_length_weekday.png")
+plt.close()
