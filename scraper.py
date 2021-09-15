@@ -21,12 +21,11 @@ current_date = first_description
 # list for storing articles
 all_articles = []
 
-def update_progress_bar(current_date):
+def update_progress_bar(pbar, current_date):
     """Update Progress bar"""
-    global progress_bar
-    progress_bar.update(1)
-    estimated_time = ((today - current_date).days * (SECOND_DELAY+0.3)) / 60
-    progress_bar.set_description(f"Scraping articles: Date:{current_date.strftime(DATE_FORMAT)}, Articles: {len(all_articles)}, Estimated time left: {round(estimated_time, 2)} min")
+    pbar.update(1)
+    estimated_time = round(((today - current_date).days * (SECOND_DELAY+0.3)) / 60)
+    pbar.set_description(f"Scraping articles: Date:{current_date.strftime(DATE_FORMAT)}, Articles: {len(all_articles)}, Estimated time left: {round(estimated_time, 2)} min")
 
 # init progressbar
 total_days = (today - first_description).days
@@ -57,9 +56,9 @@ while current_date <= today:
 
     # sleep
     time.sleep(SECOND_DELAY)
-    update_progress_bar(current_date)
+    update_progress_bar(progress_bar, current_date)
 
 
 # format data
 article_df = pd.DataFrame(all_articles, columns=["date", "article", "title", "time_text"])
-article_df.to_excel("data/tagesschau_articles.xlsx", index=False)
+article_df.to_excel("data/raw.xlsx", index=False)
