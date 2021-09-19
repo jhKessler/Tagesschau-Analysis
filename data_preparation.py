@@ -53,7 +53,7 @@ data["article"] = data["article"].str.split(",")
 data["num_topics"] = data["article"].str.len()
 
 # format title column so they are rightly classified
-data["title"] = data["title"].str.strip()
+data["title"] = data["title"].str.strip().str.lower()
 
 data.to_excel("data/sendungen.xlsx", index=False)
 
