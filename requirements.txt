@@ -5,3 +5,6 @@ tqdm
 transformers
 torch
 bs4
+plotly
+matplotlib
+kaleido
