@@ -36,13 +36,14 @@ data["weekday"] = data["date_and_time"].dt.day_name()
 data["timeslot"] = data["date_and_time"].dt.strftime("%H%M").astype(int) - data["date_and_time"].dt.strftime("%H%M").astype(int) % 20
 
 data.drop_duplicates(
-    subset=["date_and_time"],
+    subset=["date_and_time", "title"],
     inplace=True
 )
 
 # add len of description to data
 data["desc_length"] = data["article"].str.len()
-
+data.loc[data["desc_length"] == 1, "article"] = data.loc[data["desc_length"] == 1, "article"].apply(lambda x: [])
+data.loc[data["desc_length"] == 1, "desc_length"] = 0
 # add number of episode of day to dataframe
 episodes_that_day = data.groupby("date").size().to_frame()
 episodes_that_day.columns = ["episodes_that_day"]
@@ -50,12 +51,15 @@ data = data.merge(episodes_that_day, how="left", on="date")
 
 # format article to different topics and add number of topics that episode
 data["article"] = data["article"].str.split(",")
+# replace nan vals with empty list
+data["article"] = data["article"].apply(lambda x: x if isinstance(x, list) else [])
 data["num_topics"] = data["article"].str.len()
 
 # format title column so they are rightly classified
 data["title"] = data["title"].str.strip().str.lower()
 
-data.to_excel("data/sendungen.xlsx", index=False)
+
+data.to_pickle("data/sendungen.pkl")
 
 # unstack "article" column to every topic
 stacked_column = "article"
@@ -101,9 +105,7 @@ def categorise_topic(topic_str: str) -> str:
     try:
         model_output = classifier(topic_str, categories)
     except ValueError:
-        print(topic_str)
-        print(topic_str)
-        print(type(topic_str))
+        pass
     labels = model_output["labels"]
     output = model_output["scores"]
     category_index = output.index(max(output))
@@ -111,9 +113,10 @@ def categorise_topic(topic_str: str) -> str:
 
 print("Categorizing Topics...")
 data["category"] = data["topic"].progress_apply(categorise_topic)
+data.loc[data["topic"].str.contains("das wetter", case=False), "category"] = "Wetter"
 print("Done")
 
 # save to file
 print("Saving to file...")
-data.to_excel("data/topics.xlsx", index=False)
+data.to_pickle("data/topics.pkl")
 print("Done")

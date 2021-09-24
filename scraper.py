@@ -10,7 +10,7 @@ from tqdm import tqdm
 from bs4 import BeautifulSoup
     
 DATE_FORMAT = "%d/%m/%Y"
-ARCHIVE_URL = "https://www.tagesschau.de/archiv/sendungsarchiv100~_date-"
+ARCHIVE_URL = "https://www.tagesschau.de/multimedia/video/videoarchiv2~_date-"
 SECOND_DELAY = 1
 
 # dates
@@ -21,7 +21,7 @@ current_date = first_description
 # list for storing articles
 all_articles = []
 
-def update_progress_bar(pbar, current_date):
+def update_progress_bar(pbar: tqdm, current_date: datetime.datetime) -> None:
     """Update Progress bar"""
     pbar.update(1)
     estimated_time = round(((today - current_date).days * (SECOND_DELAY+0.3)) / 60)
@@ -30,7 +30,7 @@ def update_progress_bar(pbar, current_date):
 # init progressbar
 total_days = (today - first_description).days
 progress_bar = tqdm(total=total_days)
-update_progress_bar(current_date)
+update_progress_bar(progress_bar, current_date)
 
 # loop over days
 while current_date <= today:
