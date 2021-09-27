@@ -29,6 +29,7 @@ def update_progress_bar(pbar: tqdm, current_date: datetime.datetime) -> None:
 
 # init progressbar
 total_days = (today - first_description).days
+print(total_days)
 progress_bar = tqdm(total=total_days)
 update_progress_bar(progress_bar, current_date)
 
@@ -41,7 +42,6 @@ while current_date <= today:
     response = requests.get(url_string).text
     soup = BeautifulSoup(response, 'html.parser')
     
-
     # save articles
     article_teasers = list(soup.findAll(class_="teasertext"))
     titles = soup.findAll(class_="headline")

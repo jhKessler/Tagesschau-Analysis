@@ -51,6 +51,8 @@ data = data.merge(episodes_that_day, how="left", on="date")
 
 # format article to different topics and add number of topics that episode
 data["article"] = data["article"].str.split(",")
+data = data[data["article"].str.len() > 0]
+
 # replace nan vals with empty list
 data["article"] = data["article"].apply(lambda x: x if isinstance(x, list) else [])
 data["num_topics"] = data["article"].str.len()
@@ -76,6 +78,20 @@ data = pd.DataFrame(unstacked_df)
 data.dropna(subset=["topic"], inplace=True)
 data = data[data["topic"] != ""]
 data["topic"] = data["topic"].astype("str")
+
+reoccuring = data["topic"].str.strip().str.lower().value_counts()
+reoccuring = reoccuring[reoccuring > 5]
+data["topic"] = data["topic"].str.strip()
+data.reset_index(drop=True, inplace=True)
+reoccuring = data[data["topic"].str.lower().isin(reoccuring.index)]
+data.drop(index=reoccuring.index, inplace=True)
+reoccuring.append(data.loc[data["topic"].str.contains("das wetter", case=False)])
+data.drop(index=data.loc[data["topic"].str.contains("das wetter", case=False)].index, inplace=True)
+reoccuring.to_excel("data/reoccuring.xlsx", index=False)
+
+num_topics = data.groupby("sendung_id").size().to_frame()
+data = data.merge(num_topics, how="left", on="sendung_id")
+data = data.drop(columns=["num_topics"]).rename(columns={0: "num_topics"})
 print("Done")
 
 # init pandas progressbar
@@ -113,7 +129,7 @@ def categorise_topic(topic_str: str) -> str:
 
 print("Categorizing Topics...")
 data["category"] = data["topic"].progress_apply(categorise_topic)
-data.loc[data["topic"].str.contains("das wetter", case=False), "category"] = "Wetter"
+data["topic"] = data["topic"].str.strip()
 print("Done")
 
 # save to file
